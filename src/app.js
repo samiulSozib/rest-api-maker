@@ -19,8 +19,11 @@ const xss = require("xss-clean");
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: true })); // lock down in prod
-app.use(express.json({ limit: '1mb' }));
+app.use(cors({
+  origin: '*', // or specify your frontend domain like 'https://your-frontend.com'
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true,
+}));app.use(express.json({ limit: '1mb' }));
 
 app.use(xss());
 
