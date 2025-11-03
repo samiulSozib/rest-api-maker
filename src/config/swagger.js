@@ -12,7 +12,8 @@ const options = {
     },
     servers: [
       {
-        url: "http://localhost:4000", // change when deploying
+        //url: "http://localhost:4000", // change when deploying
+        url: "https://rest-api-maker.samiulcse.cloud"
       },
     ],
     components: {
