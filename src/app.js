@@ -40,7 +40,7 @@ setupSwagger(app);
 app.get('/', (req, res) => {
   res.status(200).json({
     message: '🚀 Core System API is running successfully!',
-    docs: '/api-docs',
+    docs: '/api-docs-file',
     health: '/health',
     version: '1.0.0'
   });
