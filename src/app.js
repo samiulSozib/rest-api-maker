@@ -23,7 +23,8 @@ app.use(cors({
   origin: '*', // or specify your frontend domain like 'https://your-frontend.com'
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,
-}));app.use(express.json({ limit: '1mb' }));
+}));
+app.use(express.json({ limit: '1mb' }));
 
 app.use(xss());
 

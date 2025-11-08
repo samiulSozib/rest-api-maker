@@ -3,7 +3,7 @@ const asyncHandler = require("../middlewares/asyncHandler");
 
 exports.listPackages = asyncHandler(async (req, res) => {
   const packages = await Package.findAll({ attributes: { exclude: ["createdAt", "updatedAt"] } });
-  res.json({ data: packages });
+  res.json({status:true,message:"Package get success", data: packages });
 });
 
 exports.buyPackage = asyncHandler(async (req, res) => {
@@ -11,7 +11,7 @@ exports.buyPackage = asyncHandler(async (req, res) => {
   const { package_id } = req.body;
 
   const pkg = await Package.findByPk(package_id);
-  if (!pkg) return res.status(404).json({ error: "Package not found"+package_id });
+  if (!pkg) return res.status(404).json({status:false, message: "Package not found"+package_id,data:{} });
 
   const transaction = await sequelize.transaction();
   try {
@@ -27,10 +27,10 @@ exports.buyPackage = asyncHandler(async (req, res) => {
     }, { transaction });
 
     await transaction.commit();
-    res.status(201).json({ message: "Package purchased successfully", data: purchase });
+    res.status(201).json({status:true, message: "Package purchased successfully", data: purchase });
   } catch (error) {
     await transaction.rollback();
-    res.status(500).json({ error: "Failed to purchase package", details: error.message });
+    res.status(500).json({status:false, message: "Failed to purchase package", data:{} });
   }
 });
 
@@ -67,5 +67,5 @@ exports.getPurchasedPackages = asyncHandler(async (req, res) => {
     };
   });
 
-  res.status(200).json({ data });
+  res.status(200).json({status:true,message:"Purchase package list", data:data });
 });
