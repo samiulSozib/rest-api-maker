@@ -1,40 +1,93 @@
-const { Package, Purchase, sequelize } = require("../models");
+const { Package, PackagePlan, Purchase, sequelize } = require("../models");
 const asyncHandler = require("../middlewares/asyncHandler");
 
+// List available packages for customers
 exports.listPackages = asyncHandler(async (req, res) => {
-  const packages = await Package.findAll({ attributes: { exclude: ["createdAt", "updatedAt"] } });
-  res.json({status:true,message:"Package get success", data: packages });
+  const packages = await Package.findAll({
+    where: { status: 'active' },
+    attributes: { 
+      exclude: ["createdAt", "updatedAt"] 
+    },
+    include: [{
+      model: PackagePlan,
+      where: { status: 'active' },
+      attributes: { exclude: ["createdAt", "updatedAt"] },
+      required: false
+    }],
+    order: [['base_price', 'ASC']]
+  });
+
+  res.json({
+    status: true,
+    message: "Packages retrieved successfully",
+    data: packages
+  });
 });
 
+// Buy Package
 exports.buyPackage = asyncHandler(async (req, res) => {
   const userId = req.user.id;
-  const { package_id } = req.body;
+  const { package_plan_id } = req.body;
 
-  const pkg = await Package.findByPk(package_id);
-  if (!pkg) return res.status(404).json({status:false, message: "Package not found"+package_id,data:{} });
+  const packagePlan = await PackagePlan.findByPk(package_plan_id, {
+    include: [{
+      model: Package,
+    }]
+  });
+
+  if (!packagePlan) return res.status(404).json({
+    status: false,
+    message: "Package plan not found",
+    data: {}
+  });
+
+  if (packagePlan.status !== 'active') return res.status(400).json({
+    status: false,
+    message: "This package plan is not available",
+    data: {}
+  });
 
   const transaction = await sequelize.transaction();
   try {
     const start = new Date();
-    const end = new Date(start.getTime() + pkg.duration_days * 24 * 60 * 60 * 1000);
+    const end = new Date(start.getTime() + packagePlan.duration_days * 24 * 60 * 60 * 1000);
 
     const purchase = await Purchase.create({
       user_id: userId,
-      package_id,
+      package_id: packagePlan.package_id,
+      package_plan_id: package_plan_id,
       start_date: start,
       end_date: end,
+      amount_paid: packagePlan.final_price,
       status: "active",
     }, { transaction });
 
+    // Increment sell count
+    await Package.increment('sell_count', {
+      by: 1,
+      where: { id: packagePlan.package_id },
+      transaction
+    });
+
     await transaction.commit();
-    res.status(201).json({status:true, message: "Package purchased successfully", data: purchase });
+    
+    res.status(201).json({
+      status: true,
+      message: "Package purchased successfully",
+      data: purchase
+    });
   } catch (error) {
     await transaction.rollback();
-    res.status(500).json({status:false, message: "Failed to purchase package", data:{} });
+    console.log(error);
+    res.status(500).json({
+      status: false,
+      message: "Failed to purchase package",
+      data: {}
+    });
   }
 });
 
-
+// Get Purchased Packages
 exports.getPurchasedPackages = asyncHandler(async (req, res) => {
   const userId = req.user.id;
 
@@ -43,7 +96,12 @@ exports.getPurchasedPackages = asyncHandler(async (req, res) => {
     include: [
       {
         model: Package,
-        attributes: ['id', 'name', 'price', 'duration_days', 'features']
+        
+        attributes: ['id', 'name', 'max_projects', 'max_tables_per_project', 'features']
+      },
+      {
+        model: PackagePlan,
+        attributes: ['id', 'plan_type', 'duration_days', 'price', 'discount_type', 'discount_value', 'final_price']
       }
     ],
     order: [['createdAt', 'DESC']]
@@ -57,9 +115,11 @@ exports.getPurchasedPackages = asyncHandler(async (req, res) => {
 
     return {
       id: purchase.id,
-      package: purchase.Package,
+      package: purchase.package,
+      package_plan: purchase.packagePlan,
       start_date: purchase.start_date,
       end_date: purchase.end_date,
+      amount_paid: purchase.amount_paid,
       status: isActive ? 'active' : 'expired',
       remaining_days: isActive
         ? Math.ceil((new Date(purchase.end_date) - currentDate) / (1000 * 60 * 60 * 24))
@@ -67,5 +127,33 @@ exports.getPurchasedPackages = asyncHandler(async (req, res) => {
     };
   });
 
-  res.status(200).json({status:true,message:"Purchase package list", data:data });
+  res.status(200).json({
+    status: true,
+    message: "Purchased packages retrieved successfully",
+    data: data
+  });
+});
+
+// Get Package Plan Details
+exports.getPackagePlanDetails = asyncHandler(async (req, res) => {
+  const packagePlan = await PackagePlan.findByPk(req.params.planId, {
+    include: [{
+      model: Package,
+      
+      where: { status: 'active' }
+    }],
+    where: { status: 'active' }
+  });
+
+  if (!packagePlan) return res.status(404).json({
+    status: false,
+    message: "Package plan not found",
+    data: {}
+  });
+
+  res.json({
+    status: true,
+    message: "Package plan details retrieved successfully",
+    data: packagePlan
+  });
 });
