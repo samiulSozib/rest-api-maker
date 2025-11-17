@@ -14,6 +14,8 @@ exports.createProject = asyncHandler(async (req, res) => {
 
   if (!activePackage)
     return res.status(403).json({
+      status: false,
+      message: "No active package found. Please purchase a package first.",
       error: "No active package found. Please purchase a package first.",
     });
 
@@ -41,10 +43,16 @@ exports.createProject = asyncHandler(async (req, res) => {
     );
 
     await transaction.commit();
-    res.status(201).json({ message: "Project created successfully", data: project });
+    res.status(201).json({
+      status: true,
+      message: "Project created successfully",
+      data: project,
+    });
   } catch (error) {
     await transaction.rollback();
     res.status(500).json({
+      status: false,
+      message: "Failed to create project",
       error: "Failed to create project",
       details: error.message,
     });
@@ -59,10 +67,18 @@ exports.updateProject = asyncHandler(async (req, res) => {
 
   const project = await Project.findOne({ where: { id, user_id: userId } });
   if (!project)
-    return res.status(404).json({ error: "Project not found" });
+    return res.status(404).json({
+      status: false,
+      message: "Project not found",
+      error: "Project not found",
+    });
 
   await project.update({ name, description });
-  res.json({ message: "Project updated successfully", data: project });
+  res.json({
+    status: true,
+    message: "Project updated successfully",
+    data: project,
+  });
 });
 
 // ✅ Delete project (optional: drop its database)
@@ -72,7 +88,11 @@ exports.deleteProject = asyncHandler(async (req, res) => {
 
   const project = await Project.findOne({ where: { id, user_id: userId } });
   if (!project)
-    return res.status(404).json({ error: "Project not found" });
+    return res.status(404).json({
+      status: false,
+      message: "Project not found",
+      error: "Project not found",
+    });
 
   const transaction = await sequelize.transaction();
   try {
@@ -84,10 +104,15 @@ exports.deleteProject = asyncHandler(async (req, res) => {
     await project.destroy({ transaction });
     await transaction.commit();
 
-    res.json({ message: "Project deleted successfully" });
+    res.json({
+      status: true,
+      message: "Project deleted successfully",
+    });
   } catch (error) {
     await transaction.rollback();
     res.status(500).json({
+      status: false,
+      message: "Failed to delete project",
       error: "Failed to delete project",
       details: error.message,
     });
@@ -102,14 +127,21 @@ exports.changeProjectStatus = asyncHandler(async (req, res) => {
 
   const project = await Project.findOne({ where: { id, user_id: userId } });
   if (!project)
-    return res.status(404).json({ error: "Project not found" });
+    return res.status(404).json({
+      status: false,
+      message: "Project not found",
+      error: "Project not found",
+    });
 
   project.status = status;
   await project.save();
 
-  res.json({ message: "Project status updated", data: project });
+  res.json({
+    status: true,
+    message: "Project status updated",
+    data: project,
+  });
 });
-
 
 // ✅ Get single project by ID
 exports.getProjectById = asyncHandler(async (req, res) => {
@@ -118,7 +150,35 @@ exports.getProjectById = asyncHandler(async (req, res) => {
 
   const project = await Project.findOne({ where: { id, user_id: userId } });
   if (!project)
-    return res.status(404).json({ error: "Project not found" });
+    return res.status(404).json({
+      status: false,
+      message: "Project not found",
+      error: "Project not found",
+    });
 
-  res.json({ data: project });
+  res.json({
+    status: true,
+    message: "Project fetched successfully",
+    data: project,
+  });
+});
+
+// ✅ Get projects by user
+exports.getProjects = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+
+  const project = await Project.findAll({ where: { user_id: userId } });
+  if (!project)
+    return res.status(404).json({
+      status: false,
+      message: "Project not found",
+      error: "Project not found",
+    });
+
+  res.json({
+    status: true,
+    message: "Project fetched successfully",
+    data: project,
+  });
 });

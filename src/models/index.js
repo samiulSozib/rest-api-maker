@@ -41,8 +41,9 @@ Package.hasMany(Purchase, { foreignKey: 'package_id' });
 Package.hasMany(PackagePlan,{foreignKey:'package_id'})
 PackagePlan.belongsTo(Package,{foreignKey:'package_id'})
 
-Purchase.hasMany(PackagePlan,{foreignKey:'package_plan_id'})
-PackagePlan.belongsTo(Purchase,{foreignKey:'package_plan_id'})
+Purchase.belongsTo(PackagePlan, { foreignKey: 'package_plan_id' });
+PackagePlan.hasMany(Purchase, { foreignKey: 'package_plan_id' }); // optional
+
 
 // Export all models
 module.exports = {

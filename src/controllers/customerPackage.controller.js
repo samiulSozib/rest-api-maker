@@ -1,5 +1,6 @@
 const { Package, PackagePlan, Purchase, sequelize } = require("../models");
 const asyncHandler = require("../middlewares/asyncHandler");
+const { where } = require("sequelize");
 
 // List available packages for customers
 exports.listPackages = asyncHandler(async (req, res) => {
@@ -13,8 +14,7 @@ exports.listPackages = asyncHandler(async (req, res) => {
       where: { status: 'active' },
       attributes: { exclude: ["createdAt", "updatedAt"] },
       required: false
-    }],
-    order: [['base_price', 'ASC']]
+    }]
   });
 
   res.json({
@@ -93,17 +93,14 @@ exports.getPurchasedPackages = asyncHandler(async (req, res) => {
 
   const purchases = await Purchase.findAll({
     where: { user_id: userId },
-    include: [
-      {
-        model: Package,
-        
-        attributes: ['id', 'name', 'max_projects', 'max_tables_per_project', 'features']
-      },
-      {
-        model: PackagePlan,
-        attributes: ['id', 'plan_type', 'duration_days', 'price', 'discount_type', 'discount_value', 'final_price']
-      }
-    ],
+   include: [
+    {
+      model: Package,
+    },
+    {
+      model: PackagePlan,
+    }
+  ],
     order: [['createdAt', 'DESC']]
   });
 
@@ -115,8 +112,7 @@ exports.getPurchasedPackages = asyncHandler(async (req, res) => {
 
     return {
       id: purchase.id,
-      package: purchase.package,
-      package_plan: purchase.packagePlan,
+      package: purchase,
       start_date: purchase.start_date,
       end_date: purchase.end_date,
       amount_paid: purchase.amount_paid,

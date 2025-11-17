@@ -9,9 +9,7 @@ exports.createPackageValidator = [
     .isLength({ min: 3 })
     .withMessage("Package name must be at least 3 characters long"),
 
-  body("base_price")
-    .isFloat({ gt: 0 })
-    .withMessage("Base price must be greater than 0"),
+  
 
   body("status")
     .optional()
@@ -40,10 +38,7 @@ exports.updatePackageValidator = [
     .isLength({ min: 3 })
     .withMessage("Package name must be at least 3 characters long"),
 
-  body("base_price")
-    .optional()
-    .isFloat({ gt: 0 })
-    .withMessage("Base price must be greater than 0"),
+  
 
   body("status")
     .optional()

@@ -26,10 +26,7 @@ const upload = require("../middlewares/upload");
  *         name:
  *           type: string
  *           example: Professional Plan
- *         base_price:
- *           type: number
- *           format: float
- *           example: 49.99
+ *         
  *         max_projects:
  *           type: integer
  *           example: 10

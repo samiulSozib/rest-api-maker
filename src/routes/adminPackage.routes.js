@@ -28,10 +28,6 @@ const isAdmin = require("../middlewares/isAdmin");
  *         name:
  *           type: string
  *           example: Professional Plan
- *         base_price:
- *           type: number
- *           format: float
- *           example: 49.99
  *         status:
  *           type: string
  *           enum: [active, inactive, archived]
@@ -110,6 +106,40 @@ const isAdmin = require("../middlewares/isAdmin");
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/PackagePlan'
+ * 
+ *     PackagePlanInput:
+ *       type: object
+ *       required:
+ *         - plan_type
+ *         - duration_days
+ *         - price
+ *       properties:
+ *         id:
+ *           type: integer
+ *           example: 1
+ *         plan_type:
+ *           type: string
+ *           enum: [monthly, 6_months, yearly]
+ *           example: monthly
+ *         duration_days:
+ *           type: integer
+ *           example: 30
+ *         price:
+ *           type: number
+ *           format: float
+ *           example: 49.99
+ *         discount_type:
+ *           type: string
+ *           enum: [fixed, percentage]
+ *           example: percentage
+ *         discount_value:
+ *           type: number
+ *           format: float
+ *           example: 10
+ *         status:
+ *           type: string
+ *           enum: [active, inactive]
+ *           example: active
  */
 
 /**
@@ -128,16 +158,11 @@ const isAdmin = require("../middlewares/isAdmin");
  *             type: object
  *             required:
  *               - name
- *               - base_price
  *               - plans
  *             properties:
  *               name:
  *                 type: string
  *                 example: Professional Plan
- *               base_price:
- *                 type: number
- *                 format: float
- *                 example: 49.99
  *               status:
  *                 type: string
  *                 enum: [active, inactive, archived]
@@ -154,36 +179,7 @@ const isAdmin = require("../middlewares/isAdmin");
  *               plans:
  *                 type: array
  *                 items:
- *                   type: object
- *                   required:
- *                     - plan_type
- *                     - duration_days
- *                     - price
- *                     - final_price
- *                   properties:
- *                     plan_type:
- *                       type: string
- *                       enum: [monthly, 6_months, yearly]
- *                       example: monthly
- *                     duration_days:
- *                       type: integer
- *                       example: 30
- *                     price:
- *                       type: number
- *                       format: float
- *                       example: 49.99
- *                     discount_type:
- *                       type: string
- *                       enum: [fixed, percentage]
- *                       example: percentage
- *                     discount_value:
- *                       type: number
- *                       format: float
- *                       example: 10
- *                     final_price:
- *                       type: number
- *                       format: float
- *                       example: 44.99
+ *                   $ref: '#/components/schemas/PackagePlanInput'
  *     responses:
  *       201:
  *         description: Package created successfully with plans
@@ -201,7 +197,20 @@ const isAdmin = require("../middlewares/isAdmin");
  *                 data:
  *                   $ref: '#/components/schemas/PackageWithPlans'
  *       400:
- *         description: Validation error
+ *         description: Validation error or duplicate plans
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Duplicate plan found
+ *                 data:
+ *                   type: object
  *       401:
  *         description: Unauthorized
  *       500:
@@ -298,9 +307,6 @@ router.get("/:id", verifyJwtMiddleware, isAdmin, asyncHandler(adminCtrl.getPacka
  *               name:
  *                 type: string
  *                 example: Updated Professional Plan
- *               base_price:
- *                 type: number
- *                 example: 59.99
  *               status:
  *                 type: string
  *                 enum: [active, inactive, archived]
@@ -317,31 +323,7 @@ router.get("/:id", verifyJwtMiddleware, isAdmin, asyncHandler(adminCtrl.getPacka
  *               plans:
  *                 type: array
  *                 items:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: integer
- *                       example: 1
- *                     plan_type:
- *                       type: string
- *                       enum: [monthly, 6_months, yearly]
- *                     duration_days:
- *                       type: integer
- *                     price:
- *                       type: number
- *                       format: float
- *                     discount_type:
- *                       type: string
- *                       enum: [fixed, percentage]
- *                     discount_value:
- *                       type: number
- *                       format: float
- *                     final_price:
- *                       type: number
- *                       format: float
- *                     status:
- *                       type: string
- *                       enum: [active, inactive]
+ *                   $ref: '#/components/schemas/PackagePlanInput'
  *     responses:
  *       200:
  *         description: Package updated successfully
@@ -358,6 +340,21 @@ router.get("/:id", verifyJwtMiddleware, isAdmin, asyncHandler(adminCtrl.getPacka
  *                   example: Package updated successfully
  *                 data:
  *                   $ref: '#/components/schemas/PackageWithPlans'
+ *       400:
+ *         description: Validation error or duplicate plans
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Duplicate plan found
+ *                 data:
+ *                   type: object
  *       404:
  *         description: Package not found
  */

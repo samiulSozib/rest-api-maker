@@ -25,15 +25,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('active', 'inactive'), 
       defaultValue: 'active' 
     }
-  }, { 
-    tableName: 'package_plans',
-    indexes: [
-      {
-        unique: true,
-        fields: ['package_id', 'plan_type']
-      }
-    ]
-  });
+  },{ tableName: 'package_plans' });
 
   
   return PackagePlan;

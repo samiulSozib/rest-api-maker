@@ -184,6 +184,8 @@ router.patch("/:id/status", verifyJwtMiddleware, isCustomer, asyncHandler(custom
  *         description: Project not found
  */
 router.get("/:id", verifyJwtMiddleware, isCustomer, asyncHandler(customerProjectCtrl.getProjectById));
+router.get("/", verifyJwtMiddleware, isCustomer, asyncHandler(customerProjectCtrl.getProjects));
+
 
 
 module.exports = router;
