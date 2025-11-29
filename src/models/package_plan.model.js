@@ -1,8 +1,8 @@
 module.exports = (sequelize, DataTypes) => {
   const PackagePlan = sequelize.define('PackagePlan', {
-    id: { type: DataTypes.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
+    id: { type: DataTypes.UUID, primaryKey: true,   defaultValue: DataTypes.UUIDV4 },
     package_id: { 
-      type: DataTypes.INTEGER.UNSIGNED, 
+      type: DataTypes.UUID, 
       allowNull: false,
       references: {
         model: 'packages',
@@ -10,7 +10,7 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     plan_type: { 
-      type: DataTypes.ENUM('monthly', '6_months', 'yearly'), 
+      type: DataTypes.ENUM('monthly', '6_months', 'yearly','half_yearly','half-yearly','quarterly'), 
       allowNull: false 
     },
     duration_days: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },

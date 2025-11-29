@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
   const Package = sequelize.define('Package', {
-    id: { type: DataTypes.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
+    id: { type: DataTypes.UUID, primaryKey: true,   defaultValue: DataTypes.UUIDV4 },
     name: { type: DataTypes.STRING(100), allowNull: false },
     status: { 
       type: DataTypes.ENUM('active', 'inactive', 'archived'), 

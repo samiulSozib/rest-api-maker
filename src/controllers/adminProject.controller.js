@@ -1,13 +1,69 @@
-const { Project, User, sequelize } = require("../models");
+const { Project, User, sequelize, PackagePlan, Package } = require("../models");
 const asyncHandler = require("../middlewares/asyncHandler");
 const { QueryTypes } = require("sequelize");
 
 // ✅ Get all projects
 exports.getAllProjects = asyncHandler(async (req, res) => {
-  const projects = await Project.findAll({
-    include: [{ model: User, attributes: ["id", "name", "email"] }],
+
+  // 🔹 Query params
+  const {
+    page = 1,
+    limit = 10,
+    search = "",
+    status,
+  } = req.query;
+
+  const offset = (page - 1) * limit;
+
+  // 🔹 Build WHERE conditions
+  let whereCondition = {
+    
+  };
+
+  // 🔍 Search by name or description
+  if (search.trim() !== "") {
+    whereCondition[Op.or] = [
+      { name: { [Op.like]: `%${search}%` } },
+      { description: { [Op.like]: `%${search}%` } }
+    ];
+  }
+
+  // 🔍 Filter by status
+  if (status && ['active', 'inactive', 'suspended'].includes(status)) {
+    whereCondition.status = status;
+  }
+
+  // 🔹 Fetch projects with pagination
+  const { rows, count } = await Project.findAndCountAll({
+    where: whereCondition,
+    include:[
+      {
+        model:PackagePlan,
+        include:[
+          {
+            model:Package
+          }
+        ]
+      },
+      {model:User}
+    ],
+    limit: parseInt(limit),
+    offset,
+    order: [["id", "DESC"]]
   });
-  res.json({ status: true, message: "Projects fetched successfully", data: projects });
+
+  res.json({
+    status: true,
+    message: "Projects fetched successfully",
+    data: rows,
+    pagination: {
+      total: count,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages: Math.ceil(count / limit)
+    },
+    
+  });
 });
 
 // ✅ Get single project by ID
@@ -15,7 +71,7 @@ exports.getProjectById = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const project = await Project.findOne({
     where: { id },
-    include: [{ model: User, attributes: ["id", "name", "email"] }],
+    include: [{ model: User },{model:PackagePlan,include:[{model:Package}]}],
   });
   if (!project)
     return res.status(404).json({ status: false, message: "Project not found" });
@@ -27,6 +83,19 @@ exports.getProjectById = asyncHandler(async (req, res) => {
 exports.getProjectsByUserId = asyncHandler(async (req, res) => {
   const { user_id } = req.params;
   const projects = await Project.findAll({
+    include:[
+      {
+        model:User
+      },
+      {
+        model:PackagePlan,
+        include:[
+          {
+            model:Package
+          }
+        ]
+      }
+    ],
     where: { user_id },
   });
   res.json({ status: true, message: "Projects fetched successfully", data: projects });
@@ -75,7 +144,6 @@ exports.deleteProject = asyncHandler(async (req, res) => {
     res.status(500).json({
       status: false,
       message: "Failed to delete project",
-      details: error.message,
     });
   }
 });

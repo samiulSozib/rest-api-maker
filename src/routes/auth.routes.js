@@ -6,6 +6,7 @@ const { verifyJwtMiddleware } = require("../middlewares/dashboardJwt");
 const { validate } = require("../middlewares/validate");
 const { registerValidator, loginValidator } = require("../validator/auth.validator");
 const upload = require("../middlewares/upload");
+const isCustomer = require("../middlewares/isCustomer");
 
 /**
  * @swagger
@@ -180,5 +181,10 @@ router.post(
     verifyJwtMiddleware,
     asyncHandler(authCtrl.revokeApiToken)
 );
+
+
+router.get("/customer/profile",verifyJwtMiddleware,isCustomer,asyncHandler(authCtrl.getCustomerProfile))
+router.put("/customer/profile/update", verifyJwtMiddleware,isCustomer, upload.single("profile_image"), authCtrl.updateCustomerProfile);
+
 
 module.exports = router;

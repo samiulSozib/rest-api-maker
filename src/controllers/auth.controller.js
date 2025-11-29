@@ -3,6 +3,9 @@ const { hashPassword, comparePassword } = require('../services/password.service'
 const { genApiToken, hashToken, genJwt } = require('../services/token.service');
 const { Op } = require('sequelize');
 const asyncHandler = require('../middlewares/asyncHandler');
+const path = require('path');
+const fs = require('fs');
+const sharp = require('sharp');
 
 // REGISTER
 exports.register = asyncHandler(async (req, res) => {
@@ -126,3 +129,115 @@ exports.revokeApiToken = asyncHandler(async (req, res) => {
     data: null,
   });
 });
+
+
+
+
+// get custoemr profile
+exports.getCustomerProfile = asyncHandler(async (req, res) => {
+
+ const userId=req.user.id
+
+  const user = await User.findOne({ where: { id:userId } });
+  if (!user) {
+    return res.status(401).json({
+      status: false,
+      message: 'User Not found',
+      data: null,
+    });
+  }
+
+
+
+
+  return res.status(200).json({
+    status: true,
+    message: 'User Profile Get Success',
+    data: user,
+  });
+});
+
+
+
+// updare customer profile
+
+exports.updateCustomerProfile = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+
+  const user = await User.findByPk(userId);
+  if (!user) {
+    return res.status(404).json({
+      status: false,
+      message: "User not found",
+      data: null,
+    });
+  }
+
+  const {
+    name,
+    phone_number,
+    address,
+    city,
+    state,
+    country,
+  } = req.body;
+
+  let profileImageUrl = user.profile_image;
+
+  // -----------------------------
+  // 🔥 If a new image is uploaded
+  // -----------------------------
+  if (req.file) {
+    const fileName = `profile_${userId}_${Date.now()}.jpg`;
+    const uploadDir = path.join(__dirname, "../uploads/profile/");
+    const uploadPath = path.join(uploadDir, fileName);
+
+    // Create folder if not exists
+    fs.mkdirSync(uploadDir, { recursive: true });
+
+    // -----------------------------
+    // ❌ Delete old image if exists
+    // -----------------------------
+    if (user.profile_image) {
+      const oldImagePath = path.join(
+        __dirname,
+        "..",
+        user.profile_image
+      );
+
+      if (fs.existsSync(oldImagePath)) {
+        fs.unlinkSync(oldImagePath);
+      }
+    }
+
+    // -----------------------------------------------
+    // ✨ Resize image to avatar (300x300) using sharp
+    // -----------------------------------------------
+    await sharp(req.file.buffer)
+      .resize(300, 300)     // square avatar
+      .jpeg({ quality: 85 }) // good quality / reduced size
+      .toFile(uploadPath);
+
+    profileImageUrl = `/uploads/profile/${fileName}`;
+  }
+
+  // -----------------------------
+  // Update only provided fields
+  // -----------------------------
+  await user.update({
+    name: name ?? user.name,
+    phone_number: phone_number ?? user.phone_number,
+    address: address ?? user.address,
+    city: city ?? user.city,
+    state: state ?? user.state,
+    country: country ?? user.country,
+    profile_image: profileImageUrl,
+  });
+
+  return res.status(200).json({
+    status: true,
+    message: 'Profile updated successfully',
+    data: user,
+  });
+});
+

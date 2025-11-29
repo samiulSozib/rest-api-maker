@@ -41,6 +41,7 @@ exports.buyPackage = asyncHandler(async (req, res) => {
     data: {}
   });
 
+
   if (packagePlan.status !== 'active') return res.status(400).json({
     status: false,
     message: "This package plan is not available",
@@ -60,6 +61,8 @@ exports.buyPackage = asyncHandler(async (req, res) => {
       end_date: end,
       amount_paid: packagePlan.final_price,
       status: "active",
+      total_project_limit:packagePlan.Package.max_projects,
+      total_created_project:0
     }, { transaction });
 
     // Increment sell count
