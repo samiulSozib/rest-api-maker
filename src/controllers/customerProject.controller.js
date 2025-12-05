@@ -2,6 +2,7 @@ const { Project, Purchase, sequelize, PackagePlan, Package } = require("../model
 const asyncHandler = require("../middlewares/asyncHandler");
 const { QueryTypes } = require("sequelize");
 const { Op } = require("sequelize");
+const { createDatabase, setupDatabase } = require("../utils/cpanel");
 
 
 // ✅ Create new project (with DB creation)
@@ -25,15 +26,15 @@ exports.createProject = asyncHandler(async (req, res) => {
     //return res.json(packageInfo.Package.max_tables_per_project)
 
   // generate unique DB name
-  const dbName = `proj_${userId}_${Date.now()}`;
+  //const dbName = name.replace(/-/g, "");
+  const dbName='test3'
+  //return res.json(dbName)
 
   const transaction = await sequelize.transaction();
   try {
     // create new database in MySQL server
-    // await sequelize.query(`CREATE DATABASE \`${dbName}\`;`, {
-    //   type: QueryTypes.RAW,
-    //   transaction,
-    // });
+    await setupDatabase(dbName);
+    //console.log("cPanel DB Created:", dbResponse);
 
     // create project entry
     const project = await Project.create(
@@ -41,7 +42,9 @@ exports.createProject = asyncHandler(async (req, res) => {
         user_id: userId,
         name,
         description,
-        db_name: dbName,
+        db_name: `${process.env.CPANEL_USER}_${dbName}`,
+        db_user: `${process.env.CPANEL_USER}_${dbName}`,
+        db_password:'StrongPass#123',
         status: "active",
         package_plan_id,
         total_table_limit:packageInfo.Package.max_tables_per_project,

@@ -1,4 +1,4 @@
-const { Project, User, sequelize, PackagePlan, Package } = require("../models");
+const { Project, User, sequelize, PackagePlan, Package, ProjectTable } = require("../models");
 const asyncHandler = require("../middlewares/asyncHandler");
 const { QueryTypes } = require("sequelize");
 
@@ -71,7 +71,7 @@ exports.getProjectById = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const project = await Project.findOne({
     where: { id },
-    include: [{ model: User },{model:PackagePlan,include:[{model:Package}]}],
+    include: [{ model: User },{model:ProjectTable,attributes: ["id", "table_name"]},{model:PackagePlan,include:[{model:Package}]}],
   });
   if (!project)
     return res.status(404).json({ status: false, message: "Project not found" });

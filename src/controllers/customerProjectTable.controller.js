@@ -1,6 +1,7 @@
 const { ProjectTable, Project, PackagePlan, Purchase, sequelize } = require("../models");
 const asyncHandler = require("../middlewares/asyncHandler");
 const { Op } = require("sequelize");
+const { runSQLQuery } = require("../utils/cpanel");
 
 // ✅ Create new project table
 exports.createProjectTable = asyncHandler(async (req, res) => {
@@ -29,10 +30,10 @@ exports.createProjectTable = asyncHandler(async (req, res) => {
 
   // Check if user has active purchase for this package plan
   const activePurchase = await Purchase.findOne({
-    where: { 
-      user_id: userId, 
+    where: {
+      user_id: userId,
       package_plan_id: project.package_plan_id,
-      status: "active" 
+      status: "active"
     }
   });
 
@@ -56,6 +57,54 @@ exports.createProjectTable = asyncHandler(async (req, res) => {
 
   const transaction = await sequelize.transaction();
   try {
+
+    // ---> Convert schema_json into array
+    let schemaArray = schema_json;
+
+    if (typeof schema_json === "string") {
+      try {
+        schemaArray = JSON.parse(schema_json);
+      } catch (e) {
+        return res.status(400).json({
+          status: false,
+          message: "Invalid schema_json JSON format",
+        });
+      }
+    }
+
+    if (!Array.isArray(schemaArray)) {
+      return res.status(400).json({
+        status: false,
+        message: "schema_json must be an array",
+      });
+    }
+
+    // ---> Build SQL
+    const columns = schemaArray
+      .map((col) => {
+        let sql = `\`${col.name}\` ${col.data_type}`;
+
+        if (col.max_length) sql += `(${col.max_length})`;
+        if (!col.is_nullable) sql += " NOT NULL";
+        if (col.default_value) sql += ` DEFAULT '${col.default_value}'`;
+        if (col.is_unique) sql += " UNIQUE";
+        if (col.is_primary_key) sql += " PRIMARY KEY";
+
+        return sql;
+      })
+      .join(", ");
+
+    // ---> SQL
+    const createTableSQL = `CREATE TABLE \`${table_name}\` (${columns});`;
+
+    // ---> Execute SQL on cPanel MySQL DB
+    //await runSQLQuery(project.db_name, createTableSQL);
+    
+    const result=await runSQLQuery(project.db_name, project.db_user, project.db_password, createTableSQL);
+    
+    console.log(result)
+
+
     // Create project table
     const projectTable = await ProjectTable.create(
       {
@@ -70,7 +119,7 @@ exports.createProjectTable = asyncHandler(async (req, res) => {
     // Update project table count table
     const total_tables_created = project.total_created_table + 1;
     await Project.update(
-      { total_created_table:total_tables_created },
+      { total_created_table: total_tables_created },
       {
         where: { id: project_id },
         transaction
@@ -78,7 +127,7 @@ exports.createProjectTable = asyncHandler(async (req, res) => {
     );
 
     await transaction.commit();
-    
+
     res.status(201).json({
       status: true,
       message: "Project table created successfully",
@@ -90,7 +139,7 @@ exports.createProjectTable = asyncHandler(async (req, res) => {
       status: false,
       message: "Failed to create project table",
       error: "Failed to create project table",
-      details: error.message,
+      details: error,
     });
   }
 });
@@ -129,7 +178,7 @@ exports.updateProjectTable = asyncHandler(async (req, res) => {
   }
 
   await projectTable.update({ table_name, schema_json, api_endpoints });
-  
+
   res.json({
     status: true,
     message: "Project table updated successfully",
@@ -244,7 +293,7 @@ exports.getProjectTables = asyncHandler(async (req, res) => {
       }
     ]
   });
- 
+
 
   if (!project) {
     return res.status(404).json({

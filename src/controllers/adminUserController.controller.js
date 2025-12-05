@@ -16,7 +16,7 @@ exports.getAllUsers = asyncHandler(async (req, res) => {
 
   // 🔹 Build WHERE conditions
   let whereCondition = {
-    
+    role:"user"
   };
 
   // 🔍 Search by name or description
