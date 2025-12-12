@@ -3,7 +3,7 @@ module.exports = (sequelize, DataTypes) => {
     id: { type: DataTypes.UUID, primaryKey: true,   defaultValue: DataTypes.UUIDV4 },
     name: { type: DataTypes.STRING(100), allowNull: false },
     email: { type: DataTypes.STRING(150), allowNull: false, unique: true },
-    phone_number:{type:DataTypes.STRING(60),allowNull:false},
+    phone_number:{type:DataTypes.STRING(60),allowNull:true},
     password: { type: DataTypes.STRING(255), allowNull: false },
     address:{type:DataTypes.STRING(255),allowNull:true},
     city:{type:DataTypes.STRING(255),allowNull:true},

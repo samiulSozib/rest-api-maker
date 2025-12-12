@@ -14,6 +14,7 @@ const customerDashboardRoute=require('./routes/customerDashboard.route')
 const customerProjectTableRoute=require('./routes/customerProjectTable.route')
 const adminDashboardRoute=require('./routes/adminDashboardRoute.route')
 const adminUserRoute=require('./routes/adminUserRoute.route')
+const customerProfileRoute=require('./routes/customerProfile.route')
 const errorHandler = require('./middlewares/errorHandler');
 const setupSwagger = require("./config/swagger");
 const xss = require("xss-clean");
@@ -66,6 +67,7 @@ app.use('/api/admin/projects',adminProjectRoutes)
 app.use('/api/customer/package', customerPackageRoutes);
 app.use('/api/customer/projects',customerProjectRoutes)
 app.use('/api/customer/project-table',customerProjectTableRoute)
+app.use('/api/customer', customerProfileRoute);
 app.use("/api/customer/dashboard",customerDashboardRoute)
 app.use("/api/admin/dashboard",adminDashboardRoute)
 app.use("/api/admin/users",adminUserRoute)
