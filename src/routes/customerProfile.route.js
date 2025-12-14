@@ -169,4 +169,151 @@ router.put(
   asyncHandler(profileCtrl.updateUserProfile)
 );
 
+
+/**
+ * @swagger
+ * /api/customer/profile/change-password:
+ *   post:
+ *     summary: Change user password
+ *     tags: [Customer Profile]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - current_password
+ *               - new_password
+ *             properties:
+ *               current_password:
+ *                 type: string
+ *                 example: OldPassword123
+ *               new_password:
+ *                 type: string
+ *                 example: NewStrongPassword456
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Password changed successfully
+ *       400:
+ *         description: Invalid input or validation error
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ */
+router.post(
+  "/profile/change-password",
+  verifyJwtMiddleware,
+  isCustomer,
+  asyncHandler(profileCtrl.changePassword)
+);
+
+/**
+ * @swagger
+ * /api/customer/forgot-password:
+ *   post:
+ *     summary: Request password reset
+ *     tags: [Customer Profile]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: user@example.com
+ *     responses:
+ *       200:
+ *         description: Reset link sent to email
+ */
+router.post(
+  "/forgot-password",
+  asyncHandler(profileCtrl.forgotPassword)
+);
+
+/**
+ * @swagger
+ * /api/customer/reset-password:
+ *   post:
+ *     summary: Reset user password
+ *     tags: [Customer Profile]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - token
+ *               - new_password
+ *               - confirm_password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: user@example.com
+ *               token:
+ *                 type: string
+ *                 example: reset-token-from-email
+ *               new_password:
+ *                 type: string
+ *                 example: NewStrongPassword456
+ *               confirm_password:
+ *                 type: string
+ *                 example: NewStrongPassword456
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ */
+router.post(
+  "/reset-password",
+  asyncHandler(profileCtrl.resetPassword)
+);
+
+/**
+ * @swagger
+ * /api/customer/verify-reset-token:
+ *   post:
+ *     summary: Verify reset token validity
+ *     tags: [Customer Profile]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - email
+ *             properties:
+ *               token:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Token is valid
+ */
+router.post(
+  "/verify-reset-token",
+  asyncHandler(profileCtrl.verifyResetToken)
+);
 module.exports = router;

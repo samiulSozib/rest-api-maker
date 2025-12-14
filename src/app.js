@@ -32,11 +32,14 @@ app.use(cors({
   credentials: true,
 }));
 
-
+// Body parser middleware MUST come before routes
 app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ limit: '1mb', extended: true }));
+
+// Static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-
+// Security middleware
 app.use(xss());
 
 // global rate limiter (tune in production)

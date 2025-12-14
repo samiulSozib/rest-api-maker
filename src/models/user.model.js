@@ -13,11 +13,19 @@ module.exports = (sequelize, DataTypes) => {
     role: { type: DataTypes.ENUM('user', 'admin'), allowNull: false, defaultValue: 'user' },
     api_token_hash: { type: DataTypes.STRING(128), allowNull: true, comment: 'sha256 or defined algorithm' },
     token_expiry: { type: DataTypes.DATE, allowNull: true },
+    password_reset_token: { type: DataTypes.STRING, allowNull: true },
+    password_reset_expires: { type: DataTypes.DATE, allowNull: true },
+    is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true, comment: 'User account status' },
+    last_login: { type: DataTypes.DATE, allowNull: true, comment:'Last login timestamp' },
+    failed_login_attempts: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0, comment: 'Count of consecutive failed login attempts' },
+    locked_until: { type: DataTypes.DATE, allowNull: true, comment: 'Account lock expiration timestamp' },
   }, {
     tableName: 'users',
     indexes: [
       { fields: ['email'], unique: true },
       { fields: ['api_token_hash'] },
+      { fields: ['password_reset_token'] },
+      { fields: ['is_active'] },
     ]
   });
 
