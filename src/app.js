@@ -14,6 +14,7 @@ const customerDashboardRoute=require('./routes/customerDashboard.route')
 const customerProjectTableRoute=require('./routes/customerProjectTable.route')
 const adminDashboardRoute=require('./routes/adminDashboardRoute.route')
 const adminUserRoute=require('./routes/adminUserRoute.route')
+const customerProfileRoute=require('./routes/customerProfile.route')
 const errorHandler = require('./middlewares/errorHandler');
 const setupSwagger = require("./config/swagger");
 const xss = require("xss-clean");
@@ -31,11 +32,14 @@ app.use(cors({
   credentials: true,
 }));
 
-
+// Body parser middleware MUST come before routes
 app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ limit: '1mb', extended: true }));
+
+// Static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-
+// Security middleware
 app.use(xss());
 
 // global rate limiter (tune in production)
@@ -66,6 +70,7 @@ app.use('/api/admin/projects',adminProjectRoutes)
 app.use('/api/customer/package', customerPackageRoutes);
 app.use('/api/customer/projects',customerProjectRoutes)
 app.use('/api/customer/project-table',customerProjectTableRoute)
+app.use('/api/customer', customerProfileRoute);
 app.use("/api/customer/dashboard",customerDashboardRoute)
 app.use("/api/admin/dashboard",adminDashboardRoute)
 app.use("/api/admin/users",adminUserRoute)
