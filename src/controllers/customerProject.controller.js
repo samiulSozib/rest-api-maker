@@ -1,8 +1,8 @@
 const { Project, Purchase, sequelize, PackagePlan, Package } = require("../models");
 const asyncHandler = require("../middlewares/asyncHandler");
-const { QueryTypes } = require("sequelize");
 const { Op } = require("sequelize");
-const { createDatabase, setupDatabase } = require("../utils/cpanel");
+const { createDatabase } = require("../utils/cpanel");
+const crypto = require("crypto");
 
 
 // ✅ Create new project (with DB creation)
@@ -25,16 +25,17 @@ exports.createProject = asyncHandler(async (req, res) => {
     });
     //return res.json(packageInfo.Package.max_tables_per_project)
 
-  // generate unique DB name
-  //const dbName = name.replace(/-/g, "");
-  const dbName='test3'
-  //return res.json(dbName)
+  // generate unique DB name from project name + timestamp
+  const sanitized = name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+  const dbName = `${sanitized}_${Date.now()}`;
 
   const transaction = await sequelize.transaction();
   try {
+    // generate random DB password
+    const dbPassword = crypto.randomBytes(16).toString("hex");
+
     // create new database in MySQL server
-    await setupDatabase(dbName);
-    //console.log("cPanel DB Created:", dbResponse);
+    await createDatabase(dbName);
 
     // create project entry
     const project = await Project.create(
@@ -44,7 +45,7 @@ exports.createProject = asyncHandler(async (req, res) => {
         description,
         db_name: `${process.env.CPANEL_USER}_${dbName}`,
         db_user: `${process.env.CPANEL_USER}_${dbName}`,
-        db_password:'StrongPass#123',
+        db_password: dbPassword,
         status: "active",
         package_plan_id,
         total_table_limit:packageInfo.Package.max_tables_per_project,
@@ -53,19 +54,12 @@ exports.createProject = asyncHandler(async (req, res) => {
       { transaction }
     );
 
-    const activePurchase = await Purchase.findOne({ where: { user_id: userId, package_plan_id: package_plan_id } })
-    if (!activePurchase)
-      return res.status(403).json({
-        status: false,
-        message: "No active purchase found. Please purchase a package first.",
-        error: "No active purchase found. Please purchase a package first.",
-      });
-    const total_created_project = activePurchase.total_created_project + 1;
-
+    // increment project count on active purchase
+    const total_created_project = activePackage.total_created_project + 1;
     await Purchase.update(
       { total_created_project },
       {
-        where: { user_id: userId, package_plan_id: package_plan_id },
+        where: { id: activePackage.id },
         transaction
       }
     );

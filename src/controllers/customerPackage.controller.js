@@ -1,6 +1,5 @@
 const { Package, PackagePlan, Purchase, sequelize } = require("../models");
 const asyncHandler = require("../middlewares/asyncHandler");
-const { where } = require("sequelize");
 
 // List available packages for customers
 exports.listPackages = asyncHandler(async (req, res) => {

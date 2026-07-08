@@ -1,5 +1,5 @@
 // Helper function to validate duplicate plans
-export const validateDuplicatePlans = (plans, existingPlans = []) => {
+const validateDuplicatePlans = (plans, existingPlans = []) => {
   if (!plans || plans.length === 0) return null;
 
   const planSet = new Set();
@@ -31,3 +31,5 @@ export const validateDuplicatePlans = (plans, existingPlans = []) => {
 
   return null;
 };
+
+module.exports = { validateDuplicatePlans };

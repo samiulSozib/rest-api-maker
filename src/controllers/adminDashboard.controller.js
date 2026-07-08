@@ -7,10 +7,10 @@ const { Op, fn, col, literal } = require("sequelize");
 //  ADMIN DASHBOARD CONTROLLER
 // ===============================
 exports.getAdminDashboard = asyncHandler(async (req, res) => {
-  
+
   // ===== BASIC COUNTS =====
   const totalUsers = await User.count();
-  const activeUsers = await User.count({ where: { role: "user" } });
+  const activeUsers = await User.count({ where: { is_active: true } });
 
   const totalProjects = await Project.count();
   const totalPackages = await Package.count();

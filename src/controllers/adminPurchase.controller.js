@@ -6,7 +6,7 @@ exports.getAllPurchases = asyncHandler(async (req, res) => {
   const purchases = await Purchase.findAll({
     include: [
       { model: User, attributes: ["id", "name", "email"] },
-      { model: Package, attributes: ["id", "name", "price", "duration_days"] },
+      { model: Package, attributes: ["id", "name", "max_projects", "max_tables_per_project"] },
     ],
     order: [["createdAt", "DESC"]],
   });
@@ -19,7 +19,7 @@ exports.getPurchaseById = asyncHandler(async (req, res) => {
   const purchase = await Purchase.findByPk(req.params.id, {
     include: [
       { model: User, attributes: ["id", "name", "email"] },
-      { model: Package, attributes: ["id", "name", "price", "duration_days"] },
+      { model: Package, attributes: ["id", "name", "max_projects", "max_tables_per_project"] },
     ],
   });
 
@@ -77,7 +77,7 @@ exports.getPurchasesByUserId = asyncHandler(async (req, res) => {
   const purchases = await Purchase.findAll({
     where: { user_id: userId },
     include: [
-      { model: Package, attributes: ["id", "name", "price", "duration_days"] },
+      { model: Package, attributes: ["id", "name", "max_projects", "max_tables_per_project"] },
     ],
     order: [["createdAt", "DESC"]],
   });

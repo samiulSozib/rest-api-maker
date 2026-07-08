@@ -1,6 +1,7 @@
 const { Project, User, sequelize, PackagePlan, Package, ProjectTable } = require("../models");
 const asyncHandler = require("../middlewares/asyncHandler");
-const { QueryTypes } = require("sequelize");
+const { Op, QueryTypes } = require("sequelize");
+
 
 // ✅ Get all projects
 exports.getAllProjects = asyncHandler(async (req, res) => {
@@ -17,7 +18,7 @@ exports.getAllProjects = asyncHandler(async (req, res) => {
 
   // 🔹 Build WHERE conditions
   let whereCondition = {
-    
+
   };
 
   // 🔍 Search by name or description
@@ -62,7 +63,7 @@ exports.getAllProjects = asyncHandler(async (req, res) => {
       limit: Number(limit),
       totalPages: Math.ceil(count / limit)
     },
-    
+
   });
 });
 

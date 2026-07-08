@@ -1,6 +1,5 @@
 const express = require("express");
 const router = express.Router();
-const projectTableCtrl = require("../controllers/customerProjectTable.controller");
 const customerDashboardCtrl=require("../controllers/customerDashboard.controller")
 const asyncHandler = require("../middlewares/asyncHandler");
 const { verifyJwtMiddleware } = require("../middlewares/dashboardJwt");
