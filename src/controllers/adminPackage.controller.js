@@ -79,7 +79,6 @@ exports.createPackage = asyncHandler(async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
-    console.log(error);
     res.status(500).json({
       status: false,
       message: "Failed to create package",
@@ -202,7 +201,6 @@ exports.updatePackage = asyncHandler(async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
-    console.log(error);
     res.status(500).json({
       status: false,
       message: "Failed to update package",

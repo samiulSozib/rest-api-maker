@@ -105,10 +105,6 @@ exports.changePassword = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const { current_password, new_password } = req.body;
 
-  console.log("Full req.body:", req.body);
-  console.log("current_password:", current_password);
-  console.log("new_password:", new_password);
-
   // ✅ Validate input
   if (!current_password || !new_password) {
     return res.status(400).json({

@@ -60,14 +60,51 @@ exports.login = asyncHandler(async (req, res) => {
     });
   }
 
+  if (!user.is_active) {
+    return res.status(403).json({
+      status: false,
+      message: 'Account is deactivated. Contact support.',
+      data: null,
+    });
+  }
+
+  if (user.locked_until && new Date(user.locked_until) > new Date()) {
+    const remaining = Math.ceil((new Date(user.locked_until) - new Date()) / 1000 / 60);
+    return res.status(423).json({
+      status: false,
+      message: `Account is locked. Try again in ${remaining} minute(s).`,
+      data: null,
+    });
+  }
+
   const ok = await comparePassword(password, user.password);
   if (!ok) {
+    const attempts = (user.failed_login_attempts || 0) + 1;
+    const MAX_ATTEMPTS = 5;
+    if (attempts >= MAX_ATTEMPTS) {
+      await user.update({
+        failed_login_attempts: attempts,
+        locked_until: new Date(Date.now() + 15 * 60 * 1000),
+      });
+      return res.status(423).json({
+        status: false,
+        message: 'Account locked due to too many failed attempts. Try again in 15 minutes.',
+        data: null,
+      });
+    }
+    await user.update({ failed_login_attempts: attempts });
     return res.status(401).json({
       status: false,
       message: 'Invalid credentials',
       data: null,
     });
   }
+
+  await user.update({
+    failed_login_attempts: 0,
+    locked_until: null,
+    last_login: new Date(),
+  });
 
   const token = genJwt({ id: user.id, email: user.email, role: user.role });
 

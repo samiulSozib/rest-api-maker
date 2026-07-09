@@ -11,7 +11,7 @@ exports.getAllPurchases = asyncHandler(async (req, res) => {
     order: [["createdAt", "DESC"]],
   });
 
-  res.status(200).json({ count: purchases.length, data: purchases });
+  res.status(200).json({ status: true, message: "Purchases retrieved successfully", count: purchases.length, data: purchases });
 });
 
 // ✅ Get single purchase by ID
@@ -23,9 +23,9 @@ exports.getPurchaseById = asyncHandler(async (req, res) => {
     ],
   });
 
-  if (!purchase) return res.status(404).json({ error: "Purchase not found" });
+  if (!purchase) return res.status(404).json({ status: false, message: "Purchase not found" });
 
-  res.status(200).json({ data: purchase });
+  res.status(200).json({ status: true, message: "Purchase retrieved successfully", data: purchase });
 });
 
 // ✅ Delete a purchase
@@ -33,15 +33,15 @@ exports.deletePurchase = asyncHandler(async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const purchase = await Purchase.findByPk(req.params.id);
-    if (!purchase) return res.status(404).json({ error: "Purchase not found" });
+    if (!purchase) return res.status(404).json({ status: false, message: "Purchase not found" });
 
     await purchase.destroy({ transaction });
     await transaction.commit();
 
-    res.status(200).json({ message: "Purchase deleted successfully" });
+    res.status(200).json({ status: true, message: "Purchase deleted successfully" });
   } catch (error) {
     await transaction.rollback();
-    res.status(500).json({ error: "Failed to delete purchase", details: error.message });
+    res.status(500).json({ status: false, message: "Failed to delete purchase", details: error.message });
   }
 });
 
@@ -51,21 +51,21 @@ exports.updatePurchaseStatus = asyncHandler(async (req, res) => {
   const validStatuses = ["active", "expired", "cancelled"];
 
   if (!validStatuses.includes(status)) {
-    return res.status(400).json({ error: "Invalid status value" });
+    return res.status(400).json({ status: false, message: "Invalid status value" });
   }
 
   const transaction = await sequelize.transaction();
   try {
     const purchase = await Purchase.findByPk(req.params.id);
-    if (!purchase) return res.status(404).json({ error: "Purchase not found" });
+    if (!purchase) return res.status(404).json({ status: false, message: "Purchase not found" });
 
     await purchase.update({ status }, { transaction });
     await transaction.commit();
 
-    res.status(200).json({ message: "Purchase status updated", data: purchase });
+    res.status(200).json({ status: true, message: "Purchase status updated", data: purchase });
   } catch (error) {
     await transaction.rollback();
-    res.status(500).json({ error: "Failed to update status", details: error.message });
+    res.status(500).json({ status: false, message: "Failed to update status", details: error.message });
   }
 });
 
@@ -83,7 +83,7 @@ exports.getPurchasesByUserId = asyncHandler(async (req, res) => {
   });
 
   if (!purchases.length)
-    return res.status(404).json({ success: false, message: "No purchases found for this user" });
+    return res.status(404).json({ status: false, message: "No purchases found for this user" });
 
-  res.json({ success: true, data: purchases });
+  res.json({ status: true, message: "Purchases retrieved successfully", data: purchases });
 });

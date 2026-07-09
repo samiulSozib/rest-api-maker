@@ -25,7 +25,7 @@ const options = {
         },
       },
     },
-    scheme:{
+    schemas: {
       Package: {
           type: "object",
           properties: {

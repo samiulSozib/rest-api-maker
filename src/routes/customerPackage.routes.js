@@ -3,6 +3,8 @@ const router = express.Router();
 const customerCtrl = require("../controllers/customerPackage.controller");
 const asyncHandler = require("../middlewares/asyncHandler");
 const { verifyJwtMiddleware } = require("../middlewares/dashboardJwt");
+const { validate } = require("../middlewares/validate");
+const { buyPackageValidator } = require("../validator/project.validator");
 const isCustomer = require("../middlewares/isCustomer");
 const upload = require("../middlewares/upload");
 
@@ -225,7 +227,7 @@ router.get("/plan/:planId", verifyJwtMiddleware, isCustomer, asyncHandler(custom
  *       401:
  *         description: Unauthorized
  */
-router.post("/buy", upload.none(), verifyJwtMiddleware, isCustomer, asyncHandler(customerCtrl.buyPackage));
+router.post("/buy", upload.none(), verifyJwtMiddleware, isCustomer, buyPackageValidator, validate, asyncHandler(customerCtrl.buyPackage));
 
 /**
  * @swagger

@@ -3,32 +3,67 @@ const asyncHandler = require("../middlewares/asyncHandler");
 const { Op } = require("sequelize");
 const { runSQLQuery } = require("../utils/cpanel");
 
-// ✅ Create new project table
+const ALLOWED_DATA_TYPES = [
+  "INT", "TINYINT", "SMALLINT", "MEDIUMINT", "BIGINT",
+  "VARCHAR", "CHAR", "TEXT", "TINYTEXT", "MEDIUMTEXT", "LONGTEXT",
+  "DECIMAL", "FLOAT", "DOUBLE",
+  "DATE", "DATETIME", "TIMESTAMP", "TIME", "YEAR",
+  "BOOLEAN", "BLOB", "MEDIUMBLOB", "LONGBLOB",
+  "JSON", "ENUM"
+];
+
+function sanitizeName(name) {
+  return name.replace(/[^a-zA-Z0-9_]/g, "");
+}
+
+function validateSchemaColumns(schemaArray) {
+  if (!Array.isArray(schemaArray) || schemaArray.length === 0) {
+    return "schema_json must be a non-empty array";
+  }
+  for (const col of schemaArray) {
+    if (!col.name || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(col.name)) {
+      return `Invalid column name: "${col.name}"`;
+    }
+    if (!col.data_type || !ALLOWED_DATA_TYPES.includes(col.data_type.toUpperCase())) {
+      return `Invalid or disallowed data type: "${col.data_type}"`;
+    }
+    if (col.default_value && typeof col.default_value === "string" && /['";\\]/.test(col.default_value)) {
+      return `Invalid characters in default value for column "${col.name}"`;
+    }
+  }
+  return null;
+}
+
 exports.createProjectTable = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const { project_id, table_name, schema_json, api_endpoints } = req.body;
 
-  // Check if project exists and belongs to user
+  if (!table_name || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(table_name)) {
+    return res.status(400).json({
+      status: false,
+      message: "Invalid table name. Use only letters, numbers, and underscores.",
+    });
+  }
+
+  const schemaValidationError = validateSchemaColumns(schema_json);
+  if (schemaValidationError) {
+    return res.status(400).json({
+      status: false,
+      message: schemaValidationError,
+    });
+  }
+
   const project = await Project.findOne({
     where: { id: project_id, user_id: userId },
-    include: [
-      {
-        model: PackagePlan,
-        where: { status: 'active' }, // Ensure package plan is active
-        required: true
-      }
-    ]
   });
 
   if (!project) {
     return res.status(404).json({
       status: false,
-      message: "Project not found or package plan is inactive",
-      error: "Project not found or package plan is inactive",
+      message: "Project not found",
     });
   }
 
-  // Check if user has active purchase for this package plan
   const activePurchase = await Purchase.findOne({
     where: {
       user_id: userId,
@@ -40,27 +75,20 @@ exports.createProjectTable = asyncHandler(async (req, res) => {
   if (!activePurchase) {
     return res.status(403).json({
       status: false,
-      message: "No active purchase found for this package plan",
-      error: "No active purchase found for this package plan",
+      message: "No active purchase found for this project's package plan",
     });
   }
 
-
-  // Assuming package plan has a table_limit field - you might need to add this
   if (project.total_table_limit && project.total_created_table >= project.total_table_limit) {
     return res.status(403).json({
       status: false,
       message: "Table limit reached for this package",
-      error: "Table limit reached for this package",
     });
   }
 
   const transaction = await sequelize.transaction();
   try {
-
-    // ---> Convert schema_json into array
     let schemaArray = schema_json;
-
     if (typeof schema_json === "string") {
       try {
         schemaArray = JSON.parse(schema_json);
@@ -72,58 +100,37 @@ exports.createProjectTable = asyncHandler(async (req, res) => {
       }
     }
 
-    if (!Array.isArray(schemaArray)) {
-      return res.status(400).json({
-        status: false,
-        message: "schema_json must be an array",
-      });
-    }
-
-    // ---> Build SQL
+    const sanitizedTableName = sanitizeName(table_name);
     const columns = schemaArray
       .map((col) => {
-        let sql = `\`${col.name}\` ${col.data_type}`;
-
+        const name = sanitizeName(col.name);
+        let sql = `\`${name}\` ${col.data_type.toUpperCase()}`;
         if (col.max_length) sql += `(${col.max_length})`;
         if (!col.is_nullable) sql += " NOT NULL";
-        if (col.default_value) sql += ` DEFAULT '${col.default_value}'`;
+        if (col.default_value) sql += ` DEFAULT '${String(col.default_value).replace(/'/g, "\\'")}'`;
         if (col.is_unique) sql += " UNIQUE";
         if (col.is_primary_key) sql += " PRIMARY KEY";
-
         return sql;
       })
       .join(", ");
 
-    // ---> SQL
-    const createTableSQL = `CREATE TABLE \`${table_name}\` (${columns});`;
+    const createTableSQL = `CREATE TABLE \`${sanitizedTableName}\` (${columns});`;
+    await runSQLQuery(project.db_name, project.db_user, project.db_password, createTableSQL);
 
-    // ---> Execute SQL on cPanel MySQL DB
-    //await runSQLQuery(project.db_name, createTableSQL);
-    
-    const result=await runSQLQuery(project.db_name, project.db_user, project.db_password, createTableSQL);
-    
-    console.log(result)
-
-
-    // Create project table
     const projectTable = await ProjectTable.create(
       {
         project_id,
-        table_name,
+        table_name: sanitizedTableName,
         schema_json,
         api_endpoints
       },
       { transaction }
     );
 
-    // Update project table count table
     const total_tables_created = project.total_created_table + 1;
     await Project.update(
       { total_created_table: total_tables_created },
-      {
-        where: { id: project_id },
-        transaction
-      }
+      { where: { id: project_id }, transaction }
     );
 
     await transaction.commit();
@@ -144,26 +151,17 @@ exports.createProjectTable = asyncHandler(async (req, res) => {
   }
 });
 
-// ✅ Edit project table
 exports.updateProjectTable = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const { id } = req.params;
   const { table_name, schema_json, api_endpoints } = req.body;
 
-  // Find project table and verify ownership through project
   const projectTable = await ProjectTable.findOne({
     include: [
       {
         model: Project,
         where: { user_id: userId },
         required: true,
-        include: [
-          {
-            model: PackagePlan,
-            where: { status: 'active' }, // Ensure package plan is active
-            required: true
-          }
-        ]
       }
     ],
     where: { id }
@@ -172,12 +170,16 @@ exports.updateProjectTable = asyncHandler(async (req, res) => {
   if (!projectTable) {
     return res.status(404).json({
       status: false,
-      message: "Project table not found or package plan is inactive",
-      error: "Project table not found or package plan is inactive",
+      message: "Project table not found",
     });
   }
 
-  await projectTable.update({ table_name, schema_json, api_endpoints });
+  const updateData = {};
+  if (table_name !== undefined) updateData.table_name = table_name;
+  if (schema_json !== undefined) updateData.schema_json = schema_json;
+  if (api_endpoints !== undefined) updateData.api_endpoints = api_endpoints;
+
+  await projectTable.update(updateData);
 
   res.json({
     status: true,
@@ -186,12 +188,10 @@ exports.updateProjectTable = asyncHandler(async (req, res) => {
   });
 });
 
-// ✅ Delete project table
 exports.deleteProjectTable = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const { id } = req.params;
 
-  // Find project table and verify ownership through project
   const projectTable = await ProjectTable.findOne({
     include: [
       {
@@ -207,7 +207,6 @@ exports.deleteProjectTable = asyncHandler(async (req, res) => {
     return res.status(404).json({
       status: false,
       message: "Project table not found",
-      error: "Project table not found",
     });
   }
 
@@ -225,13 +224,11 @@ exports.deleteProjectTable = asyncHandler(async (req, res) => {
     res.status(500).json({
       status: false,
       message: "Failed to delete project table",
-      error: "Failed to delete project table",
       details: error.message,
     });
   }
 });
 
-// ✅ Get single project table by ID
 exports.getProjectTableById = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const { id } = req.params;
@@ -242,12 +239,6 @@ exports.getProjectTableById = asyncHandler(async (req, res) => {
         model: Project,
         where: { user_id: userId },
         required: true,
-        include: [
-          {
-            model: PackagePlan,
-            where: { status: 'active' }
-          }
-        ]
       }
     ],
     where: { id }
@@ -256,8 +247,7 @@ exports.getProjectTableById = asyncHandler(async (req, res) => {
   if (!projectTable) {
     return res.status(404).json({
       status: false,
-      message: "Project table not found or package plan is inactive",
-      error: "Project table not found or package plan is inactive",
+      message: "Project table not found",
     });
   }
 
@@ -268,12 +258,10 @@ exports.getProjectTableById = asyncHandler(async (req, res) => {
   });
 });
 
-// ✅ Get project tables by project
 exports.getProjectTables = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const { project_id } = req.params;
 
-  // 🔹 Query params
   const {
     page = 1,
     limit = 10,
@@ -282,38 +270,23 @@ exports.getProjectTables = asyncHandler(async (req, res) => {
 
   const offset = (page - 1) * limit;
 
-  // Verify project exists and belongs to user with active package plan
   const project = await Project.findOne({
     where: { id: project_id, user_id: userId },
-    include: [
-      {
-        model: PackagePlan,
-        where: { status: 'active' },
-        required: true
-      }
-    ]
   });
-
 
   if (!project) {
     return res.status(404).json({
       status: false,
-      message: "Project not found or package plan is inactive",
-      error: "Project not found or package plan is inactive",
+      message: "Project not found",
     });
   }
 
-  // 🔹 Build WHERE conditions
-  let whereCondition = {
-    project_id,
-  };
+  let whereCondition = { project_id };
 
-  // 🔍 Search by table name
   if (search.trim() !== "") {
     whereCondition.table_name = { [Op.like]: `%${search}%` };
   }
 
-  // 🔹 Fetch project tables with pagination
   const { rows, count } = await ProjectTable.findAndCountAll({
     where: whereCondition,
     include: [
@@ -340,11 +313,9 @@ exports.getProjectTables = asyncHandler(async (req, res) => {
   });
 });
 
-// ✅ Get all tables for a user (across all projects)
 exports.getAllUserProjectTables = asyncHandler(async (req, res) => {
   const userId = req.user.id;
 
-  // 🔹 Query params
   const {
     page = 1,
     limit = 10,
@@ -354,20 +325,16 @@ exports.getAllUserProjectTables = asyncHandler(async (req, res) => {
 
   const offset = (page - 1) * limit;
 
-  // 🔹 Build WHERE conditions for ProjectTable
   let tableWhereCondition = {};
 
-  // 🔍 Search by table name
   if (search.trim() !== "") {
     tableWhereCondition.table_name = { [Op.like]: `%${search}%` };
   }
 
-  // 🔍 Filter by project
   if (project_id) {
     tableWhereCondition.project_id = project_id;
   }
 
-  // 🔹 Fetch project tables with pagination
   const { rows, count } = await ProjectTable.findAndCountAll({
     where: tableWhereCondition,
     include: [
@@ -375,13 +342,6 @@ exports.getAllUserProjectTables = asyncHandler(async (req, res) => {
         model: Project,
         where: { user_id: userId },
         required: true,
-        include: [
-          {
-            model: PackagePlan,
-            where: { status: 'active' },
-            required: true
-          }
-        ]
       }
     ],
     limit: parseInt(limit),

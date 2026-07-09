@@ -34,10 +34,9 @@ async function callCpanelAPI(module, functionName, params = {}) {
 }
 
 // Create MySQL Database
-async function createDatabase(dbName) {
+async function createDatabase(dbName, dbPass) {
     const fullDBName = `${CPANEL_USER}_${dbName}`;
-    const dbUser = `${fullDBName}`; // or any user naming convention
-    const dbPass = 'StrongPass#123';     // must meet cPanel password requirements
+    const dbUser = `${fullDBName}`;
 
     // 1️⃣ Create database
     await callCpanelAPI("Mysql", "create_database", { name: fullDBName });
@@ -68,8 +67,6 @@ async function runSQLQuery(database, user, password, query) {
         database
     });
 
-    console.log(connection)
-    
     const [results] = await connection.execute(query);
     await connection.end();
     return results;

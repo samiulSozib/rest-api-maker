@@ -75,7 +75,8 @@ exports.getCustomerDashboard = asyncHandler(async (req, res) => {
   });
 
   res.status(200).json({
-    success: true,
+    status: true,
+    message: "Customer dashboard data retrieved successfully",
     data: {
       activePurchase,
       totals: {

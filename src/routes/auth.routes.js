@@ -5,6 +5,7 @@ const asyncHandler = require("../middlewares/asyncHandler");
 const { verifyJwtMiddleware } = require("../middlewares/dashboardJwt");
 const { validate } = require("../middlewares/validate");
 const { registerValidator, loginValidator } = require("../validator/auth.validator");
+const upload = require("../middlewares/upload");
 
 /**
  * @swagger

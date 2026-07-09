@@ -35,7 +35,7 @@ exports.createProject = asyncHandler(async (req, res) => {
     const dbPassword = crypto.randomBytes(16).toString("hex");
 
     // create new database in MySQL server
-    await createDatabase(dbName);
+    await createDatabase(dbName, dbPassword);
 
     // create project entry
     const project = await Project.create(

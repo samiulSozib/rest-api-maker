@@ -3,6 +3,8 @@ const router = express.Router();
 const customerProjectCtrl = require("../controllers/customerProject.controller");
 const asyncHandler = require("../middlewares/asyncHandler");
 const { verifyJwtMiddleware } = require("../middlewares/dashboardJwt");
+const { validate } = require("../middlewares/validate");
+const { createProjectValidator } = require("../validator/project.validator");
 const isCustomer = require("../middlewares/isCustomer");
 const upload = require("../middlewares/upload");
 
@@ -65,7 +67,7 @@ const upload = require("../middlewares/upload");
  *       500:
  *         description: Server error
  */
-router.post("/",upload.none(), verifyJwtMiddleware, isCustomer, asyncHandler(customerProjectCtrl.createProject));
+router.post("/", upload.none(), verifyJwtMiddleware, isCustomer, createProjectValidator, validate, asyncHandler(customerProjectCtrl.createProject));
 
 /**
  * @swagger
@@ -183,8 +185,8 @@ router.patch("/:id/status", verifyJwtMiddleware, isCustomer, asyncHandler(custom
  *       404:
  *         description: Project not found
  */
-router.get("/:id", verifyJwtMiddleware, isCustomer, asyncHandler(customerProjectCtrl.getProjectById));
 router.get("/", verifyJwtMiddleware, isCustomer, asyncHandler(customerProjectCtrl.getProjects));
+router.get("/:id", verifyJwtMiddleware, isCustomer, asyncHandler(customerProjectCtrl.getProjectById));
 
 
 

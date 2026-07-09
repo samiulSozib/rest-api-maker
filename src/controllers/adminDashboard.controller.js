@@ -71,7 +71,8 @@ exports.getAdminDashboard = asyncHandler(async (req, res) => {
 
 
   res.status(200).json({
-    success: true,
+    status: true,
+    message: "Admin dashboard data retrieved successfully",
     data: {
       totals: {
         totalUsers,

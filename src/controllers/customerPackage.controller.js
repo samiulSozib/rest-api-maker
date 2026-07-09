@@ -47,6 +47,17 @@ exports.buyPackage = asyncHandler(async (req, res) => {
     data: {}
   });
 
+  const existingActive = await Purchase.findOne({
+    where: { user_id: userId, package_plan_id, status: "active" }
+  });
+  if (existingActive) {
+    return res.status(409).json({
+      status: false,
+      message: "You already have an active purchase for this plan",
+      data: {}
+    });
+  }
+
   const transaction = await sequelize.transaction();
   try {
     const start = new Date();
@@ -80,7 +91,6 @@ exports.buyPackage = asyncHandler(async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
-    console.log(error);
     res.status(500).json({
       status: false,
       message: "Failed to purchase package",
@@ -108,9 +118,15 @@ exports.getPurchasedPackages = asyncHandler(async (req, res) => {
 
   const currentDate = new Date();
 
+  for (const purchase of purchases) {
+    if (purchase.status === 'active' && new Date(purchase.end_date) <= currentDate) {
+      purchase.status = 'expired';
+      await purchase.save();
+    }
+  }
+
   const data = purchases.map((purchase) => {
-    const isActive =
-      purchase.status === 'active' && new Date(purchase.end_date) > currentDate;
+    const isActive = purchase.status === 'active';
 
     return {
       id: purchase.id,
@@ -118,7 +134,7 @@ exports.getPurchasedPackages = asyncHandler(async (req, res) => {
       start_date: purchase.start_date,
       end_date: purchase.end_date,
       amount_paid: purchase.amount_paid,
-      status: isActive ? 'active' : 'expired',
+      status: purchase.status,
       remaining_days: isActive
         ? Math.ceil((new Date(purchase.end_date) - currentDate) / (1000 * 60 * 60 * 24))
         : 0
