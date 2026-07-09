@@ -58,7 +58,7 @@ async function createDatabase(dbName, dbPass) {
 
 
 // Run SQL Query inside a database using direct MySQL connection
-async function runSQLQuery(database, user, password, query) {
+async function runSQLQuery(database, user, password, query, params = []) {
     const connection = await mysql.createConnection({
         host: 'localhost',  
         port: '3306',  
@@ -67,7 +67,7 @@ async function runSQLQuery(database, user, password, query) {
         database
     });
 
-    const [results] = await connection.execute(query);
+    const [results] = await connection.execute(query, params);
     await connection.end();
     return results;
 }

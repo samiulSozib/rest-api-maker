@@ -13,7 +13,7 @@ const options = {
     servers: [
       {
         //url: "https://rest-api-maker.samiulcse.cloud",
-        url:'http://localhost:4000'
+        url:'http://localhost:3000'
       },
     ],
     components: {
@@ -66,7 +66,7 @@ const swaggerSpec = swaggerJsdoc(options);
 
 function setupSwagger(app) {
   app.use("/api-docs-file", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-  console.log("📘 Swagger docs available at: http://localhost:4000/api-docs");
+  console.log("📘 Swagger docs available at: http://localhost:3000/api-docs");
 }
 
 module.exports = setupSwagger;
