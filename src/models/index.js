@@ -10,6 +10,7 @@ const ProjectTable = require('./project_table.model')(sequelize, DataTypes);
 const TokenLog = require('./token_log.model')(sequelize, DataTypes);
 const Purchase = require('./purchase.model')(sequelize, DataTypes);
 const PackagePlan = require('./package_plan.model')(sequelize,DataTypes)
+const Session = require('./session.model')(sequelize, DataTypes)
 
 // Associations
 
@@ -30,6 +31,10 @@ ProjectTable.belongsTo(Project, { foreignKey: 'project_id' });
 // --- User & TokenLog
 User.hasMany(TokenLog, { foreignKey: 'user_id' });
 TokenLog.belongsTo(User, { foreignKey: 'user_id' });
+
+// --- User & Session
+User.hasMany(Session, { foreignKey: 'user_id' });
+Session.belongsTo(User, { foreignKey: 'user_id' });
 
 // --- Purchase relationships
 Purchase.belongsTo(User, { foreignKey: 'user_id' });
@@ -63,5 +68,6 @@ module.exports = {
   ProjectTable,
   TokenLog,
   Purchase,
-  PackagePlan
+  PackagePlan,
+  Session
 };

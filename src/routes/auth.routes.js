@@ -181,5 +181,52 @@ router.post(
     asyncHandler(authCtrl.revokeApiToken)
 );
 
+/**
+ * @swagger
+ * /api/auth/refresh:
+ *   post:
+ *     summary: Refresh access token using a valid refresh token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refresh_token
+ *             properties:
+ *               refresh_token:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Tokens refreshed successfully
+ *       401:
+ *         description: Invalid or expired refresh token
+ */
+router.post(
+    "/refresh",
+    asyncHandler(authCtrl.refreshToken)
+);
+
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: Logout and revoke refresh token
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logged out successfully
+ *       401:
+ *         description: Unauthorized
+ */
+router.post(
+    "/logout",
+    verifyJwtMiddleware,
+    asyncHandler(authCtrl.logout)
+);
 
 module.exports = router;

@@ -11,6 +11,7 @@ module.exports = (sequelize, DataTypes) => {
     country:{type:DataTypes.STRING(255),allowNull:true},
     profile_image:{type:DataTypes.STRING(255),allowNull:true},
     role: { type: DataTypes.ENUM('user', 'admin'), allowNull: false, defaultValue: 'user' },
+    token_version: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0, comment: 'Increment to invalidate all existing access tokens' },
     api_token_hash: { type: DataTypes.STRING(128), allowNull: true, comment: 'sha256 or defined algorithm' },
     token_expiry: { type: DataTypes.DATE, allowNull: true },
     password_reset_token: { type: DataTypes.STRING, allowNull: true },
