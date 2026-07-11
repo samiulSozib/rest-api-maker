@@ -117,7 +117,7 @@ router.post(
  *             schema:
  *               type: object
  *               properties:
- *                 token:
+ *                 access_token:
  *                   type: string
  *                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
  *                 user:

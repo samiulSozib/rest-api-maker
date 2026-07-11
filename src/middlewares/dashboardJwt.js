@@ -8,7 +8,7 @@ module.exports.verifyJwtMiddleware = async (req, res, next) => {
   try {
     const payload = verifyAccessToken(token);
 
-    if (!payload.token_version) {
+    if (payload.token_version == null) {
       return res.status(401).json({ status: false, message: 'Token issued by old system. Please login again.', data: null });
     }
 

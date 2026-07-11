@@ -40,7 +40,6 @@ function buildAuthResponse(user, accessToken, expiresIn, rawRefreshToken) {
     user: { id: user.id, name: user.name, email: user.email, role: user.role },
     access_token: accessToken,
     refresh_token: rawRefreshToken,
-    token: accessToken,
     token_type: 'Bearer',
     expires_in: expiresIn,
     refresh_expires_in: REFRESH_EXPIRES_SECONDS,
@@ -343,7 +342,6 @@ exports.refreshToken = asyncHandler(async (req, res) => {
     data: {
       access_token: newAccessToken,
       refresh_token: newRawRefreshToken,
-      token: newAccessToken,
       token_type: 'Bearer',
       expires_in: expiresIn,
       refresh_expires_in: REFRESH_EXPIRES_SECONDS,
