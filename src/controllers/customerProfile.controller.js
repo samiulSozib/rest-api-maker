@@ -1,4 +1,4 @@
-const { User, sequelize } = require("../models");
+const { User, Session, sequelize } = require("../models");
 const asyncHandler = require("../middlewares/asyncHandler");
 const path = require("path");
 const fs = require("fs");
@@ -151,14 +151,16 @@ exports.changePassword = asyncHandler(async (req, res) => {
     });
   }
 
-  // Update to new password
+  // Update to new password and invalidate all existing sessions
   const hashed = await hashPassword(new_password);
   user.password = hashed;
   await user.save();
 
+  await Session.destroy({ where: { user_id: userId } });
+
   return res.status(200).json({
     status: true,
-    message: "Password changed successfully",
+    message: "Password changed successfully. You will need to login again on other devices.",
     data: null,
   });
 });
@@ -289,16 +291,19 @@ exports.resetPassword = asyncHandler(async (req, res) => {
   //Hash new password
   const hashedPassword = await hashPassword(new_password);
 
-  //Update user password and clear reset token fields
+  //Update user password, clear reset token fields, invalidate all sessions
   await user.update({
     password: hashedPassword,
     password_reset_token: null,
     password_reset_expires: null,
+    token_version: sequelize.literal('token_version + 1'),
   });
+
+  await Session.destroy({ where: { user_id: user.id } });
 
   return res.status(200).json({
     status: true,
-    message: "Password has been reset successfully",
+    message: "Password has been reset successfully. Please login again.",
     data: null,
   });
 

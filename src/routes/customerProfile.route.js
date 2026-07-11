@@ -1,10 +1,17 @@
 const express = require("express");
 const router = express.Router();
+const rateLimit = require("express-rate-limit");
 const profileCtrl = require("../controllers/customerProfile.controller");
 const asyncHandler = require("../middlewares/asyncHandler");
 const { verifyJwtMiddleware } = require("../middlewares/dashboardJwt");
 const upload = require("../middlewares/upload");
 const isCustomer = require("../middlewares/isCustomer");
+
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 3,
+  message: { status: false, message: "Too many requests. Try again later.", data: null },
+});
 
 /**
  * @swagger
@@ -246,6 +253,7 @@ router.post(
  */
 router.post(
   "/forgot-password",
+  forgotPasswordLimiter,
   asyncHandler(profileCtrl.forgotPassword)
 );
 

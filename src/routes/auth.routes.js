@@ -1,11 +1,31 @@
 const express = require("express");
 const router = express.Router();
+const rateLimit = require("express-rate-limit");
 const authCtrl = require("../controllers/auth.controller");
 const asyncHandler = require("../middlewares/asyncHandler");
 const { verifyJwtMiddleware } = require("../middlewares/dashboardJwt");
 const { validate } = require("../middlewares/validate");
 const { registerValidator, loginValidator } = require("../validator/auth.validator");
 const upload = require("../middlewares/upload");
+
+// Auth-specific rate limiters
+const loginLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { status: false, message: "Too many login attempts. Try again later.", data: null },
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { status: false, message: "Too many registration attempts. Try again later.", data: null },
+});
+
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 3,
+  message: { status: false, message: "Too many requests. Try again later.", data: null },
+});
 
 /**
  * @swagger
@@ -58,7 +78,8 @@ const upload = require("../middlewares/upload");
  */
 router.post(
     "/register",
-    upload.none(), // ✅ allows form-data
+    registerLimiter,
+    upload.none(),
     registerValidator,
     validate,
     asyncHandler(authCtrl.register)
@@ -116,7 +137,8 @@ router.post(
  */
 router.post(
     "/login",
-    upload.none(), // ✅ allows form-data
+    loginLimiter,
+    upload.none(),
     loginValidator,
     validate,
     asyncHandler(authCtrl.login)
@@ -227,6 +249,64 @@ router.post(
     "/logout",
     verifyJwtMiddleware,
     asyncHandler(authCtrl.logout)
+);
+
+/**
+ * @swagger
+ * /api/auth/verify-email:
+ *   post:
+ *     summary: Verify email address with token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - email
+ *             properties:
+ *               token:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Email verified successfully
+ *       400:
+ *         description: Invalid or expired token
+ */
+router.post(
+    "/verify-email",
+    asyncHandler(authCtrl.verifyEmail)
+);
+
+/**
+ * @swagger
+ * /api/auth/resend-verification:
+ *   post:
+ *     summary: Resend email verification link
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Verification email sent
+ */
+router.post(
+    "/resend-verification",
+    registerLimiter,
+    asyncHandler(authCtrl.resendVerification)
 );
 
 module.exports = router;

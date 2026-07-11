@@ -24,10 +24,14 @@ function parseDurationToSeconds(duration) {
   return val * (multipliers[unit] || 60);
 }
 
+const ISSUER = process.env.JWT_ISSUER || 'rest-api-maker';
+
 function genAccessToken(user) {
   const expiresInSeconds = parseDurationToSeconds(TOKEN_EXPIRES_IN);
   const payload = {
     jti: crypto.randomBytes(16).toString('hex'),
+    iss: ISSUER,
+    aud: ISSUER,
     id: user.id,
     email: user.email,
     role: user.role,
