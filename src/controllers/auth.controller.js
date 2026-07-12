@@ -3,18 +3,43 @@ const { User, TokenLog, Session, AuthLog } = require('../models');
 const { hashPassword, comparePassword } = require('../services/password.service');
 const sendEmail = require('../services/email.service');
 const {
-  genApiToken, hashToken,
-  genAccessToken, genRefreshToken, hashRefreshToken,
-  parseDurationToSeconds, TOKEN_EXPIRES_IN, REFRESH_EXPIRES_DAYS,
+  genApiToken,
+  hashToken,
+  genAccessToken,
+  genRefreshToken,
+  hashRefreshToken,
+  parseDurationToSeconds,
+  TOKEN_EXPIRES_IN,
+  REFRESH_EXPIRES_DAYS,
 } = require('../services/token.service');
 const asyncHandler = require('../middlewares/asyncHandler');
 
 const REFRESH_EXPIRES_SECONDS = REFRESH_EXPIRES_DAYS * 86400;
+const ACCESS_TOKEN_EXPIRES_SECONDS = parseDurationToSeconds(TOKEN_EXPIRES_IN);
 const REQUIRE_EMAIL_VERIFICATION = process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
 const VERIFY_TOKEN_EXPIRY_HOURS = Number(process.env.VERIFY_TOKEN_EXPIRY_HOURS) || 24;
 const VERIFY_TOKEN_EXPIRY_MS = VERIFY_TOKEN_EXPIRY_HOURS * 3600 * 1000;
 const COOKIE_SECURE = process.env.NODE_ENV === 'production';
 const COOKIE_SAME_SITE = 'strict';
+
+function setAccessTokenCookie(res, rawAccessToken) {
+  res.cookie('access_token', rawAccessToken, {
+    httpOnly: true,
+    secure: COOKIE_SECURE,
+    sameSite: COOKIE_SAME_SITE,
+    path: '/',
+    maxAge: ACCESS_TOKEN_EXPIRES_SECONDS * 1000,
+  });
+}
+
+function clearAccessTokenCookie(res) {
+  res.clearCookie('access_token', {
+    httpOnly: true,
+    secure: COOKIE_SECURE,
+    sameSite: COOKIE_SAME_SITE,
+    path: '/',
+  });
+}
 
 function setRefreshCookie(res, rawRefreshToken) {
   res.cookie('refresh_token', rawRefreshToken, {
@@ -35,11 +60,10 @@ function clearRefreshCookie(res) {
   });
 }
 
-function buildAuthResponse(user, accessToken, expiresIn, rawRefreshToken) {
+function buildAuthResponse(user, accessToken, expiresIn) {
   return {
     user: { id: user.id, name: user.name, email: user.email, role: user.role },
     access_token: accessToken,
-    refresh_token: rawRefreshToken,
     token_type: 'Bearer',
     expires_in: expiresIn,
     refresh_expires_in: REFRESH_EXPIRES_SECONDS,
@@ -157,12 +181,13 @@ exports.register = asyncHandler(async (req, res) => {
 
   await createSession(user.id, refreshTokenHash, refreshExpiry, req);
 
+  setAccessTokenCookie(res, accessToken);
   setRefreshCookie(res, rawRefreshToken);
 
   return res.status(201).json({
     status: true,
     message: 'User registered successfully',
-    data: buildAuthResponse(user, accessToken, expiresIn, rawRefreshToken),
+    data: buildAuthResponse(user, accessToken, expiresIn),
   });
 });
 
@@ -225,7 +250,9 @@ exports.login = asyncHandler(async (req, res) => {
         failed_login_attempts: attempts,
         locked_until: new Date(Date.now() + 15 * 60 * 1000),
       });
-      await logAuthEvent('login_failed', user.id, req, { reason: 'account_locked_too_many_attempts' });
+      await logAuthEvent('login_failed', user.id, req, {
+        reason: 'account_locked_too_many_attempts',
+      });
       return res.status(423).json({
         status: false,
         message: 'Account locked due to too many failed attempts. Try again in 15 minutes.',
@@ -254,6 +281,7 @@ exports.login = asyncHandler(async (req, res) => {
 
   await createSession(user.id, refreshTokenHash, refreshExpiry, req);
 
+  setAccessTokenCookie(res, accessToken);
   setRefreshCookie(res, rawRefreshToken);
 
   await logAuthEvent('login_success', user.id, req);
@@ -261,7 +289,7 @@ exports.login = asyncHandler(async (req, res) => {
   return res.status(200).json({
     status: true,
     message: 'Login successful',
-    data: buildAuthResponse(user, accessToken, expiresIn, rawRefreshToken),
+    data: buildAuthResponse(user, accessToken, expiresIn),
   });
 });
 
@@ -332,6 +360,7 @@ exports.refreshToken = asyncHandler(async (req, res) => {
 
   await createSession(user.id, newRefreshTokenHash, newRefreshExpiry, req);
 
+  setAccessTokenCookie(res, newAccessToken);
   setRefreshCookie(res, newRawRefreshToken);
 
   await logAuthEvent('refresh', user.id, req);
@@ -341,7 +370,6 @@ exports.refreshToken = asyncHandler(async (req, res) => {
     message: 'Tokens refreshed successfully',
     data: {
       access_token: newAccessToken,
-      refresh_token: newRawRefreshToken,
       token_type: 'Bearer',
       expires_in: expiresIn,
       refresh_expires_in: REFRESH_EXPIRES_SECONDS,
@@ -438,11 +466,14 @@ exports.logout = asyncHandler(async (req, res) => {
 
   if (refresh_token) {
     const refreshTokenHash = hashRefreshToken(refresh_token);
-    await Session.destroy({ where: { refresh_token_hash: refreshTokenHash, user_id: req.user.id } });
+    await Session.destroy({
+      where: { refresh_token_hash: refreshTokenHash, user_id: req.user.id },
+    });
   } else {
     await revokeAllUserSessions(req.user.id);
   }
 
+  clearAccessTokenCookie(res);
   clearRefreshCookie(res);
 
   await logAuthEvent('logout', req.user.id, req);
@@ -489,7 +520,11 @@ exports.revokeApiToken = asyncHandler(async (req, res) => {
     });
   }
 
-  await TokenLog.create({ user_id: userId, api_token_hash: user.api_token_hash, action: 'revoked' });
+  await TokenLog.create({
+    user_id: userId,
+    api_token_hash: user.api_token_hash,
+    action: 'revoked',
+  });
   await User.update({ api_token_hash: null, token_expiry: null }, { where: { id: userId } });
 
   return res.status(200).json({
@@ -498,9 +533,3 @@ exports.revokeApiToken = asyncHandler(async (req, res) => {
     data: null,
   });
 });
-
-
-
-
-
-
